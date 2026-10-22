@@ -1,0 +1,36 @@
+# token-replacer — edit the endpoints below for your machine.
+
+host: 127.0.0.1
+port: 8470
+
+# The local tier: any OpenAI-compatible server.
+#   llama.cpp : llama-server -m qwen3.5-9b-q4_k_m.gguf --port 8080 -c 32768 -np 8 -fa
+#   ollama    : ollama serve          (base_url: http://127.0.0.1:11434/v1)
+#   lm studio : base_url: http://127.0.0.1:1234/v1
+local:
+  name: llama.cpp
+  base_url: http://127.0.0.1:8080/v1
+  timeout_s: 120
+  connect_timeout_s: 3
+  max_concurrency: 8          # match llama-server's --parallel
+  model_override: qwen3.5-9b  # callers ask for their model; this box serves ours
+
+# The big-context tier: OrcaRoute, or any paid/free provider.
+upstream:
+  name: orcaroute
+  base_url: http://127.0.0.1:8112/v1
+  timeout_s: 300
+  connect_timeout_s: 5
+  max_concurrency: 32
+  api_key: null               # or set TOKEN_REPLACER_UPSTREAM_KEY
+
+policy:
+  max_local_context: 32000    # hard capability limit, not a difficulty guess
+  safety_margin: 0.9          # estimate is approximate; leave headroom
+  allow_tools_local: false    # flip only after measuring tool-call validity
+  allow_images_local: false
+
+breaker_threshold: 5
+breaker_cooldown_s: 30
+escalate_on_error: true
+log_decisions: true
