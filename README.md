@@ -137,13 +137,58 @@ for a model that no longer fits a consumer card.
 
 ## Tests
 
+Four layers, in increasing order of what they can prove.
+
+**1. Logic — no network, no GPU.**
 ```bash
-pytest                      # 30 unit tests, no network, no GPU
-python scripts/smoke_e2e.py  # real uvicorn + real HTTP, stub models
+pytest -q          # 30 tests
+```
+Context gate, capability gate, breaker behaviour, escalation, header hygiene.
+
+**2. Wiring — real HTTP, stub models.**
+```bash
+python scripts/smoke_e2e.py          # 3 uvicorn servers, 6 checks; exits 1 on failure
+```
+URL joining, SSE pass-through, escalation before the first byte, metric
+reconciliation.
+
+**3. Real model, real request.**
+```bash
+llama-server -m qwen3.5-9b-Q4_K_M.gguf --port 8080 -c 32768 -np 8 -fa &
+token-replacer serve -c config.yaml &
+curl -s localhost:8470/v1/chat/completions -D- -H 'content-type: application/json' \
+  -d '{"model":"deepseek-v4.1-flash","messages":[{"role":"user","content":"what does strtok return"}]}'
+```
+Look at `X-TokenReplacer-Tier` and `X-TokenReplacer-Reason`: that is the router
+telling you what it did. This layer only proves it answers, not that the answers
+are worth having.
+
+**4. Quality — the only layer that decides whether the local tier ships.**
+```bash
+python scripts/ab_eval.py prompts.example.jsonl \
+  --local http://127.0.0.1:8080/v1 \
+  --upstream http://127.0.0.1:8112/v1 \
+  --verify exact --out report.json
+
+# use this as a release gate: fail if the local tier loses more than N cases
+python scripts/ab_eval.py prompts.jsonl --local ... --upstream ... \
+  --verify exact --max-gap 3
 ```
 
-The smoke test runs three servers and asserts escalation, streaming, the context
-gate and metric reconciliation end to end.
+Same prompts through both tiers, each graded by an oracle, reported as a parity
+gap with the failing cases named:
+
+```
+local_pass 18/24   upstream_pass 24/24   parity_gap 6
+local_only_pass 0  upstream_only_pass 6
+local_latency_p50_s 2.14   upstream_latency_p50_s 6.71
+failures: ["code-4", "code-9", ...]
+```
+
+Verifiers: `exact`, `contains`, `cmd` (run a checker against the answer — use
+this for code), `none` (agreement only; weak, because two models can be wrong
+together). Build the suite from prompts you actually send, not from a public
+benchmark: the question is whether the local model handles *your* traffic.
 
 ## Limits, stated plainly
 

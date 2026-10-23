@@ -1,0 +1,12 @@
+# Example eval set for scripts/ab_eval.py. One JSON object per line.
+# `expect` is the oracle for --verify exact / contains.
+# For code, use --verify cmd with a checker (see the last line) — a test either
+# runs or it doesn't, which beats string comparison by a mile.
+{"id": "math-arith", "messages": [{"role": "user", "content": "What is 17 * 23? Reply with the number only."}], "expect": "391"}
+{"id": "math-algebra", "messages": [{"role": "user", "content": "Solve for x: 4x - 7 = 21. Reply with the number only."}], "expect": "7"}
+{"id": "py-semantics", "messages": [{"role": "user", "content": "In Python, what does the expression `[] * 3` evaluate to? Reply with only the value."}], "expect": "[]"}
+{"id": "py-gotcha", "messages": [{"role": "user", "content": "What does `bool('False')` return in Python? Reply with True or False only."}], "expect": "True"}
+{"id": "sql-basic", "messages": [{"role": "user", "content": "Which SQL clause filters rows before grouping: WHERE or HAVING? Reply with the keyword only."}], "expect": "WHERE"}
+{"id": "git-undo", "messages": [{"role": "user", "content": "Which git command unstages a file but keeps the changes in the working tree? Reply with the command only."}], "expect": "git restore --staged"}
+{"id": "regex-digits", "messages": [{"role": "user", "content": "Write a regex that matches one or more digits. Reply with the regex only."}], "expect": "\\d+"}
+{"id": "code-fizzbuzz", "messages": [{"role": "user", "content": "Write a Python function fizz(n) returning 'Fizz' if n is divisible by 3, 'Buzz' if by 5, 'FizzBuzz' if by both, else str(n). Reply with code only, no prose."}], "files": {}, "cmd_hint": "python -c \"exec(open(r'{answer}').read()); assert fizz(3)=='Fizz' and fizz(5)=='Buzz' and fizz(15)=='FizzBuzz' and fizz(7)=='7'\""}
